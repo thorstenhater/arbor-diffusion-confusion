@@ -29,12 +29,14 @@ class diffusionRecipe(A.recipe):
         self.the_props.catalogue.extend(A.load_catalogue("./custom-catalogue.so"), "")
 
         # diffusivity of particles
-        self.diffusivity = 1
+        self.diffusivity = 1e-9
         self.the_props.set_ion("s", 1, 0, 0, self.diffusivity)
         self.the_props.set_ion("p", 1, 0, 0, self.diffusivity)
 
+        self.ch_0 = 420
         self.ch_1 = 1000
         self.ch_2 = 500
+        self.times_0 = [0.75]
         self.times_1 = [0.5, 1.5,]
         self.times_2 = [1.0]
         self.radius_soma = r_soma
@@ -103,6 +105,7 @@ class diffusionRecipe(A.recipe):
                   .set_ion("p", int_con=0.0, diff=self.diffusivity)
                   .place('"dendrite1_synapses"', A.synapse("synapse_with_diffusion"), "syn_1")
                   .place('"dendrite2_synapses"', A.synapse("synapse_with_diffusion"), "syn_2")
+		  .place('"soma"', A.synapse("synapse_with_diffusion"), "syn_0")
                   .paint('(region "soma_region")', A.density("neuron_with_diffusion"))
                   .paint('(all)', A.density("neuron_with_diffusion_2")))
 
@@ -114,7 +117,8 @@ class diffusionRecipe(A.recipe):
         return self.the_props
 
     def event_generators(self, gid):
-        ev_gens = [A.event_generator("syn_1",  self.ch_1, A.explicit_schedule(self.times_1)),
+        ev_gens = [A.event_generator("syn_0",  self.ch_0, A.explicit_schedule(self.times_0)),
+		   A.event_generator("syn_1",  self.ch_1, A.explicit_schedule(self.times_1)),
                    A.event_generator("syn_2", -self.ch_2, A.explicit_schedule(self.times_2))]
         return ev_gens
 
@@ -181,7 +185,7 @@ def run_sim(points, r_soma, r_dend, tx):
             total += data[:, ix + 1]
         tx.plot(data[:, 0], total, label=f"Total particles dx={rec.delta_x} rs={rec.radius_soma} rd={rec.radius_dendrite}")
         print(f"Equilibrium")
-        print(f" * Particles      | {total[-1]:10.4f}")
+        print(f" * Particles      | {np.max(total):10.4f}")
     for data, meta in sim.samples(hdls[10]):
         print(f" * Concentration  | {data[-1, 1]:10.4f}")
         print(f" * Particles'     | {data[-1, 1]*rec.volume_µm3:10.4f}")
